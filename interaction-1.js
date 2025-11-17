@@ -72,8 +72,9 @@ function rotationChange(rotx, roty, rotz) {
     // Vi använder rotx (tilt sida-till-sida) som styrsignal
     const tilt = rotx; // ungefär -90 till +90 grader
 
-    // Hämta min/max för en parameter i tuono, t.ex. "/thunder/rumble"
-    const [minVal, maxVal] = getMinMaxParam("/bubble");
+    // Hämta min/max för en parameter i det aktuella WASM-ljudet
+    const mainAddr = getMainParamAddress();
+    const [minVal, maxVal] = getMinMaxParam(mainAddr);
 
     // Begränsa tilt till [-90, +90] och normalisera till [0, 1]
     const clamped = Math.max(-90, Math.min(90, tilt));
@@ -83,7 +84,7 @@ function rotationChange(rotx, roty, rotz) {
     const value = minVal + norm * (maxVal - minVal);
 
     // Sätt parameter-värdet i DSP:n
-    dspNode.setParamValue("/bubble", value);
+    dspNode.setParamValue(mainAddr, value);
 }
 
 function mousePressed() {
@@ -113,6 +114,15 @@ function getMinMaxParam(address) {
     return [exampleMinValue, exampleMaxValue]
 }
 
+function getMainParamAddress() {
+    // Om vi har laddat parametrar från WASM, använd den första kontrollparametern
+    if (dspNodeParams && dspNodeParams.length > 0 && dspNodeParams[0].address) {
+        return dspNodeParams[0].address;
+    }
+    // Fallback om något skulle saknas
+    return "/thunder/rumble";
+}
+
 //==========================================================================================
 // AUDIO INTERACTION
 //------------------------------------------------------------------------------------------
@@ -130,12 +140,10 @@ function playAudio() {
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see 
-    // them printed on the console of your browser when you load the page)
-    // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
-    // "/thunder/rumble".
-    dspNode.setParamValue("/bubble", 1)
-    setTimeout(() => { dspNode.setParamValue("/bubble", 0) }, 100);
+    // Hämta huvudparametern för det aktuella WASM-ljudet (t.ex. bubble)
+    const mainAddr = getMainParamAddress();
+    dspNode.setParamValue(mainAddr, 1);
+    setTimeout(() => { dspNode.setParamValue(mainAddr, 0); }, 100);
 }
 
 //==========================================================================================

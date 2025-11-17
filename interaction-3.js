@@ -56,10 +56,30 @@ function accelerationChange(accx, accy, accz) {
 }
 
 function rotationChange(rotx, roty, rotz) {
+    if (!dspNode) return;
+
+    // Kolla först ungefär vilka värden du får:
+    console.log("rotation:", rotx, roty, rotz);
+
+    // Antag att "pekar rakt upp" ≈ rotx runt -90 (justera efter vad du ser i loggen)
+    const targetAngle = -90;   // ändra till t.ex. 80 om det passar bättre
+    const tolerance  = 20;     // hur nära vi kräver att det ska vara
+
+    const diff = Math.abs(rotx - targetAngle);
+
+    if (diff < tolerance) {
+        // Telefonen pekar (ungefär) rakt upp → max pressure
+        statusLabels[1].style("color", "pink");
+        playAudio(1.0);  // max tryck
+    } else {
+        // Annars kan vi ha lägre tryck eller inget alls
+        // t.ex. "andas" lite svagare brass:
+        playAudio(0.1);
+    }
 }
 
 function mousePressed() {
-    playAudio(mouseX/windowWidth)
+   // playAudio(mouseX/windowWidth)
     // Use this for debugging from the desktop!
 }
 
@@ -74,7 +94,7 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    // playAudio();
 }
 
 function getMinMaxParam(address) {

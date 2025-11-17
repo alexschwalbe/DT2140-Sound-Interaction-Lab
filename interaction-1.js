@@ -120,7 +120,7 @@ function getMainParamAddress() {
         return dspNodeParams[0].address;
     }
     // Fallback om något skulle saknas
-    return "/thunder/rumble";
+    return "/bubble/drop";
 }
 
 //==========================================================================================

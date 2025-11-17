@@ -54,28 +54,39 @@ brass.createDSP(audioContext, 1024)
 function accelerationChange(accx, accy, accz) {
     // playAudio()
 }
+let wasPointingUp = false; // minns om vi redan var i "pekar uppåt"-läge
 
 function rotationChange(rotx, roty, rotz) {
     if (!dspNode) return;
 
-    // Kolla först ungefär vilka värden du får:
+    // Kolla värdena i konsolen första gången så du ser hur de beter sig
     console.log("rotation:", rotx, roty, rotz);
 
-    // Antag att "pekar rakt upp" ≈ rotx runt -90 (justera efter vad du ser i loggen)
-    const targetAngle = -90;   // ändra till t.ex. 80 om det passar bättre
-    const tolerance  = 20;     // hur nära vi kräver att det ska vara
+    // Vi tolkar:
+    // rotx ≈ pitch (fram/tilt), roty ≈ roll (sida)
+    const pitch = rotx;
+    const roll  = roty;
 
-    const diff = Math.abs(rotx - targetAngle);
+    // Villkor för "telefonen pekar rakt upp":
+    // - pitch nära -90 (eller +90 beroende på hur du håller telefonen)
+    // - roll inte för sned
+    const pitchTarget   = -90;  // testa ev +90 om du ser det i loggen
+    const pitchTolerance = 15;  // hur nära vi kräver att pitch ska vara
+    const rollMax       = 25;   // hur mycket sidolutning vi tillåter
 
-    if (diff < tolerance) {
-        // Telefonen pekar (ungefär) rakt upp → max pressure
-        statusLabels[1].style("color", "pink");
-        playAudio(1.0);  // max tryck
-    } else {
-        // Annars kan vi ha lägre tryck eller inget alls
-        // t.ex. "andas" lite svagare brass:
-        playAudio(0.1);
+    const pitchDiff = Math.abs(pitch - pitchTarget);
+    const pointingUp =
+        (pitchDiff < pitchTolerance) &&
+        (Math.abs(roll) < rollMax);
+
+    // Endast när vi GÅR IN i "pointing up"-läge triggar vi ljud
+    if (pointingUp && !wasPointingUp) {
+        statusLabels[1].style("color", "pink"); // visuellt feedback
+        playAudio(1.0); // max tryck när vi pekar rakt upp
     }
+
+    // Uppdatera state
+    wasPointingUp = pointingUp;
 }
 
 function mousePressed() {

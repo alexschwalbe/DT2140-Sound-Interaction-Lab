@@ -72,9 +72,8 @@ function rotationChange(rotx, roty, rotz) {
     // Vi använder rotx (tilt sida-till-sida) som styrsignal
     const tilt = rotx; // ungefär -90 till +90 grader
 
-    // Hämta min/max för bubble-volym, styrs av tilt
-    const mainAddr = "/bubble/volume";
-    const [minVal, maxVal] = getMinMaxParam(mainAddr);
+    // Hämta min/max för en parameter i tuono, t.ex. "/thunder/rumble"
+    const [minVal, maxVal] = getMinMaxParam("/thunder/rumble");
 
     // Begränsa tilt till [-90, +90] och normalisera till [0, 1]
     const clamped = Math.max(-90, Math.min(90, tilt));
@@ -84,7 +83,7 @@ function rotationChange(rotx, roty, rotz) {
     const value = minVal + norm * (maxVal - minVal);
 
     // Sätt parameter-värdet i DSP:n
-    dspNode.setParamValue(mainAddr, value);
+    dspNode.setParamValue("/thunder/rumble", value);
 }
 
 function mousePressed() {
@@ -114,15 +113,6 @@ function getMinMaxParam(address) {
     return [exampleMinValue, exampleMaxValue]
 }
 
-function getMainParamAddress() {
-    // Om vi har laddat parametrar från WASM, använd den första kontrollparametern
-    if (dspNodeParams && dspNodeParams.length > 0 && dspNodeParams[0].address) {
-        return dspNodeParams[0].address;
-    }
-    // Fallback om något skulle saknas
-    return "/bubble/volume";
-}
-
 //==========================================================================================
 // AUDIO INTERACTION
 //------------------------------------------------------------------------------------------
@@ -144,8 +134,8 @@ function playAudio() {
     // them printed on the console of your browser when you load the page)
     // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
     // "/thunder/rumble".
-    dspNode.setParamValue("/bubble/volume", 1)
-    setTimeout(() => { dspNode.setParamValue("/bubble/volume", 0) }, 100);
+    dspNode.setParamValue("/thunder/rumble", 1)
+    setTimeout(() => { dspNode.setParamValue("/thunder/rumble", 0) }, 100);
 }
 
 //==========================================================================================

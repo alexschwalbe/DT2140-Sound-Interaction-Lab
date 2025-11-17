@@ -72,8 +72,8 @@ function rotationChange(rotx, roty, rotz) {
     // Vi använder rotx (tilt sida-till-sida) som styrsignal
     const tilt = rotx; // ungefär -90 till +90 grader
 
-    // Hämta min/max för en parameter i det aktuella WASM-ljudet
-    const mainAddr = getMainParamAddress();
+    // Hämta min/max för bubble-volym, styrs av tilt
+    const mainAddr = "/bubble/volume";
     const [minVal, maxVal] = getMinMaxParam(mainAddr);
 
     // Begränsa tilt till [-90, +90] och normalisera till [0, 1]
@@ -140,10 +140,9 @@ function playAudio() {
     if (audioContext.state === 'suspended') {
         return;
     }
-    // Hämta huvudparametern för det aktuella WASM-ljudet (t.ex. bubble)
-    const mainAddr = getMainParamAddress();
-    dspNode.setParamValue(mainAddr, 1);
-    setTimeout(() => { dspNode.setParamValue(mainAddr, 0); }, 100);
+    // Trigga bubble-ljudet via Faust-knappen "drop"
+    dspNode.setParamValue("/drop", 1);
+    setTimeout(() => { dspNode.setParamValue("/drop", 0); }, 100);
 }
 
 //==========================================================================================

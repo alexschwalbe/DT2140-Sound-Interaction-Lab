@@ -73,7 +73,7 @@ function rotationChange(rotx, roty, rotz) {
     const tilt = rotx; // ungefär -90 till +90 grader
 
     // Hämta min/max för bubble-volym, styrs av tilt
-    const mainAddr = "/bubble/volume";
+    const mainAddr = "/bubble/drop";
     const [minVal, maxVal] = getMinMaxParam(mainAddr);
 
     // Begränsa tilt till [-90, +90] och normalisera till [0, 1]

@@ -12,7 +12,7 @@ let dspNodeParams = null;
 let jsonParams = null;
 
 // Change here to ("tuono") depending on your wasm file name
-const dspName = "bubble";
+const dspName = "tuono";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module

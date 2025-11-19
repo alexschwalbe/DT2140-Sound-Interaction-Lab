@@ -88,10 +88,6 @@ function deviceTurned() {
     threshVals[1] = turnAxis;
 }
 
-function mousePressed() {
-    // För desktop-debug – klick på skärmen -> motor på max
-    playAudio(1.0);
-}
 
 function deviceShaken() {
     shaketimer = millis();

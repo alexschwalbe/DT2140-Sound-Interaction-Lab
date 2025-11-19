@@ -86,14 +86,19 @@ function deviceMoved() {
 
 function deviceTurned() {
     threshVals[1] = turnAxis;
+    // Vrid telefonen (deviceTurned) -> starta motorn på ganska hög nivå
+    if (typeof turntimer !== 'undefined') {
+        turntimer = millis();
+    }
+    statusLabels[1].style("color", "pink");
+    playAudio(0.8);
 }
 
 
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    // Skaka telefonen -> starta motorn på ganska hög nivå
-    playAudio(0.8);
+    // Shaken används nu bara som visuell feedback, inte för att trigga ljud
 }
 
 function getMinMaxParam(address) {

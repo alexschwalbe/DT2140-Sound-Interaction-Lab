@@ -10,9 +10,10 @@
 let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
+let wasPointingUp = false; 
 
 // Change here to ("tuono") depending on your wasm file name
-const dspName = "tuono";
+const dspName = "bubble";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -25,7 +26,7 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-window[dspName].createDSP(audioContext, 1024)
+bubble.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -52,42 +53,24 @@ window[dspName].createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    if (!dspNode) return;
-
-    // Beräkna ungefärlig rörelsestyrka
-    const mag = Math.sqrt(accx * accx + accy * accy + accz * accz);
-
-    // Tröskelvärde för "stor rörelse" – justera vid behov
-    const largeMovementThreshold = 20; // prova gärna 10–30
-
-    // Endast väldigt stora rörelser triggar ljudet
-    if (mag > largeMovementThreshold) {
-        playAudio();
-    }
+    // playAudio()
 }
 
 function rotationChange(rotx, roty, rotz) {
-    if (!dspNode || !dspNodeParams) return;
+    // rotx ≈ -90° när mobilen pekar rakt upp (kan variera mellan enheter)
+    const isPointingUp = (rotx < -60 && rotx > -120);
 
-    // Vi använder rotx (tilt sida-till-sida) som styrsignal
-    const tilt = rotx; // ungefär -90 till +90 grader
+    // Trigga playAudio när vi går in i "uppåtriktad" zonen
+    if (isPointingUp && !wasPointingUp) {
+        playAudio();
+    }
 
-    // Hämta min/max för en parameter i tuono, t.ex. "/thunder/rumble"
-    const [minVal, maxVal] = getMinMaxParam("/thunder/rumble");
-
-    // Begränsa tilt till [-90, +90] och normalisera till [0, 1]
-    const clamped = Math.max(-90, Math.min(90, tilt));
-    const norm = (clamped + 90) / 180;
-
-    // Skala till [minVal, maxVal]
-    const value = minVal + norm * (maxVal - minVal);
-
-    // Sätt parameter-värdet i DSP:n
-    dspNode.setParamValue("/thunder/rumble", value);
+    wasPointingUp = isPointingUp;
 }
 
+
 function mousePressed() {
-    // playAudio()
+    //playAudio()
     // Use this for debugging from the desktop!
 }
 
@@ -102,7 +85,7 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
+    //playAudio();
 }
 
 function getMinMaxParam(address) {
@@ -124,19 +107,18 @@ function getMinMaxParam(address) {
 //==========================================================================================
 
 function playAudio() {
-    if (!dspNode) {
-        return;
-    }
-    if (audioContext.state === 'suspended') {
-        return;
-    }
-    // Edit here the addresses ("/thunder/rumble") depending on your WASM controls (you can see 
-    // them printed on the console of your browser when you load the page)
-    // For example if you change to a bell sound, here you could use "/churchBell/gate" instead of
-    // "/thunder/rumble".
-    dspNode.setParamValue("/thunder/rumble", 1)
-    setTimeout(() => { dspNode.setParamValue("/thunder/rumble", 0) }, 100);
+    if (!dspNode) return;
+    if (audioContext.state !== "running") return;
+
+    dspNode.setParamValue("/bubble/bubble/freq", 800);
+    dspNode.setParamValue("/bubble/bubble/volume", 0.9);
+
+    // TRIGGER
+    dspNode.setParamValue("/bubble/drop", 1);
+    setTimeout(() => dspNode.setParamValue("/bubble/drop", 0), 50);
 }
+
+
 
 //==========================================================================================
 // END

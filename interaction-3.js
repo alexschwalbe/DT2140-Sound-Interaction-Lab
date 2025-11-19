@@ -49,35 +49,6 @@ function accelerationChange(accx, accy, accz) {
 
 let lastEngineActive = false; // minns om motorn var igång senast
 
-// ENGINE: styrs av tilt sida-till-sida när telefonen ligger platt i handen
-function rotationChange(rotx, roty, rotz) {
-    if (!dspNode) return;
-    if (audioContext.state === "suspended") return;
-
-    const pitch = rotx; // fram/bak
-    const roll  = roty; // sida till sida
-
-    console.log("rotation:", pitch, roll, rotz);
-
-    // Telefonen "platt" ≈ pitch nära 0
-    const flatTarget    = 0;
-    const flatTolerance = 20;
-    const isFlat = Math.abs(pitch - flatTarget) < flatTolerance;
-
-    if (isFlat) {
-        statusLabels[1].style("color", "lightgreen");
-        playEngineFromTilt(roll);
-        lastEngineActive = true;
-    } else {
-        statusLabels[1].style("color", "black");
-        if (lastEngineActive) {
-            dspNode.setParamValue("/engine/gate", 0); // stoppa motorn
-            lastEngineActive = false;
-        }
-    }
-}
-
-
 
 function deviceMoved() {
     movetimer = millis();
@@ -128,17 +99,6 @@ function playAudio(pressure) {
     dspNode.setParamValue("/engine/volume", 0.2 + 0.8 * p);
 }
 
-// Tilt-funktion (roll)
-function playEngineFromTilt(roll) {
-    if (!dspNode) return;
-    if (audioContext.state === 'suspended') return;
-
-    const maxTilt = 60;
-    const clamped = Math.max(-maxTilt, Math.min(maxTilt, roll));
-    const norm = Math.abs(clamped) / maxTilt; // 0 = platt, 1 = max tilt
-
-    playAudio(norm);
-}
 
 //==========================================================================================
 // END

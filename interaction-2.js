@@ -12,7 +12,7 @@ let dspNodeParams = null;
 let jsonParams = null;
 
 // Change here to ("tuono") depending on your wasm file name
-const dspName = "bells";
+const dspName = "rain";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -25,7 +25,7 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-bells.createDSP(audioContext, 1024)
+rain.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -95,16 +95,24 @@ function getMinMaxParam(address) {
 //
 //==========================================================================================
 
-function playAudio() {
-    if (!dspNode) {
-        return;
-    }
+async function playAudio() {
+    if (!dspNode) return;
+
+    // säkerställ att ljudmotorn faktiskt är igång
     if (audioContext.state === 'suspended') {
-        return;
+        await audioContext.resume();
     }
-    dspNode.setParamValue("/englishBell/gate", 1)
-    setTimeout(() => { dspNode.setParamValue("/englishBell/gate", 0) }, 100);
+
+    // sätt en lagom regnvolym
+    dspNode.setParamValue("/complex_rain/volume", 0.7);
+
+    // öppna gate en kort stund när mobilen skakas
+    dspNode.setParamValue("/complex_rain/gate", 1);
+    setTimeout(() => {
+        dspNode.setParamValue("/complex_rain/gate", 0);
+    }, 500); // 0.5 s regn per shake – kan justeras
 }
+
 
 //==========================================================================================
 // END

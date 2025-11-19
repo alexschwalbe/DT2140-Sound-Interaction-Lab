@@ -1,17 +1,11 @@
 //==========================================================================================
 // AUDIO SETUP
-//------------------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------------------
-// Edit just where you're asked to!
-//------------------------------------------------------------------------------------------
-//
 //==========================================================================================
 let dspNode = null;
 let dspNodeParams = null;
 let jsonParams = null;
 
-// Byt här till "engine" (namnet på din wasm-fil: engine.wasm)
+// Namnet måste matcha engine.wasm
 const dspName = "engine";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
@@ -33,62 +27,59 @@ engine.createDSP(audioContext, 1024)
         const jsonString = dspNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
         dspNodeParams = jsonParams;
+
+        // (valfritt) sätt lite default-värden
+        dspNode.setParamValue("/engine/brushLevel", 0.9);
+        dspNode.setParamValue("/engine/rotorLevel", 0.6);
+        dspNode.setParamValue("/engine/statorLevel", 0.7);
+        dspNode.setParamValue("/engine/tubeRes", 0.2);
+        dspNode.setParamValue("/engine/runtime", 5.0);
+        dspNode.setParamValue("/engine/gate", 0);   // starta med motor av
+        dspNode.setParamValue("/engine/volume", 0.3);
     });
 
 
 //==========================================================================================
 // INTERACTIONS
-//------------------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------------------
-// Edit the next functions to create interactions
-// Decide which parameters you're using and then use playAudio to play the Audio
-//------------------------------------------------------------------------------------------
-//0
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // Du kan använda accelerationen om du vill ha fler interaktioner
+    // valfri extra interaktion
 }
 
 let lastEngineActive = false; // minns om motorn var igång senast
 
-//------------------------------------------------------------------------------------------
 // ENGINE: styrs av tilt sida-till-sida när telefonen ligger platt i handen
-//------------------------------------------------------------------------------------------
 function rotationChange(rotx, roty, rotz) {
     if (!dspNode) return;
     if (audioContext.state === "suspended") return;
 
-    // rotx ≈ pitch (fram/bak), roty ≈ roll (sida till sida)
-    const pitch = rotx;
-    const roll  = roty;
+    const pitch = rotx; // fram/bak
+    const roll  = roty; // sida till sida
 
     console.log("rotation:", pitch, roll, rotz);
 
-    // 1) Kolla om telefonen ligger "platt" i handen (pitch nära 0 grader)
+    // Telefonen "platt" ≈ pitch nära 0
     const flatTarget    = 0;
-    const flatTolerance = 20; // hur nära 0 för att räknas som platt
+    const flatTolerance = 20;
     const isFlat = Math.abs(pitch - flatTarget) < flatTolerance;
 
     if (isFlat) {
-        // Telefonen är platt -> vi använder roll (sida-till-sida) för att styra motorn
         statusLabels[1].style("color", "lightgreen");
         playEngineFromTilt(roll);
         lastEngineActive = true;
     } else {
-        // Inte platt -> stäng av motorn
         statusLabels[1].style("color", "black");
         if (lastEngineActive) {
-            dspNode.setParamValue("/gate", 0); // stoppar motorn
+            dspNode.setParamValue("/engine/gate", 0); // stoppa motorn
             lastEngineActive = false;
         }
     }
 }
 
 function mousePressed() {
-    // För debugging på desktop kan du ersätta tilt med musinteraktion om du vill
-    // t.ex. playAudio(mouseX / windowWidth);
+    // För desktop-debug (om du vill):
+    // playAudio(mouseX / windowWidth);
 }
 
 function deviceMoved() {
@@ -107,7 +98,6 @@ function deviceShaken() {
 
 function getMinMaxParam(address) {
     const exampleMinMaxParam = findByAddress(dspNodeParams, address);
-    // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
     const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
     console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
     return [exampleMinValue, exampleMaxValue];
@@ -115,16 +105,10 @@ function getMinMaxParam(address) {
 
 
 //==========================================================================================
-// AUDIO INTERACTION
-//------------------------------------------------------------------------------------------
-//
-//------------------------------------------------------------------------------------------
-// Här definierar vi våra audio-kontroller för engine.dsp
-//------------------------------------------------------------------------------------------
-//
+// AUDIO INTERACTION – ENGINE
 //==========================================================================================
 
-// Allmän wrapper: styr motor med ett "pressure" [0,1]
+// Allmän wrapper: styr motorn med ett "pressure" [0,1]
 function playAudio(pressure) {
     if (!dspNode) return;
     if (audioContext.state === 'suspended') return;
@@ -132,32 +116,23 @@ function playAudio(pressure) {
     const p = Math.max(0, Math.min(1, pressure)); // clamp 0..1
 
     // Slå på motorn om vi har lite tryck
-    dspNode.setParamValue("/gate", p > 0.05 ? 1 : 0);
+    dspNode.setParamValue("/engine/gate", p > 0.05 ? 1 : 0);
 
     // Koppla pressure till maxSpeed och volume
-    dspNode.setParamValue("/maxSpeed", p);
-    dspNode.setParamValue("/volume", 0.2 + 0.8 * p);
+    dspNode.setParamValue("/engine/maxSpeed", p);
+    dspNode.setParamValue("/engine/volume", 0.2 + 0.8 * p);
 }
 
-// Engine-funktion specifikt för tilt (roll)
+// Tilt-funktion (roll)
 function playEngineFromTilt(roll) {
     if (!dspNode) return;
     if (audioContext.state === 'suspended') return;
 
-    // roll är vinkel när du tiltar mobilen sida till sida.
-    // Klamra till [-60, 60] och normalisera till [0,1]
     const maxTilt = 60;
     const clamped = Math.max(-maxTilt, Math.min(maxTilt, roll));
     const norm = Math.abs(clamped) / maxTilt; // 0 = platt, 1 = max tilt
 
-    // Återanvänd playAudio så vi har samma mapping
     playAudio(norm);
-
-    // Om du vill fixa vissa basvärden kan du göra det här:
-    // dspNode.setParamValue("/statorLevel", 0.7);
-    // dspNode.setParamValue("/brushLevel", 0.9);
-    // dspNode.setParamValue("/rotorLevel", 0.6);
-    // dspNode.setParamValue("/tubeRes", 0.2);
 }
 
 //==========================================================================================

@@ -1,6 +1,7 @@
 //==========================================================================================
 // AUDIO SETUP – FIRE + WIND
 //==========================================================================================
+let dspNode = null;
 let fireNode = null;
 let windNode = null;
 let fireParams = null;
@@ -22,6 +23,7 @@ if (typeof module === "undefined") {
 window[fireName].createDSP(audioContext, 1024)
     .then(node => {
         fireNode = node;
+        dspNode = fireNode;
         fireNode.connect(audioContext.destination);
         console.log('FIRE params: ', fireNode.getParams());
         const jsonString = fireNode.getJSON();

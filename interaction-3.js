@@ -29,9 +29,9 @@ window[fireName].createDSP(audioContext, 1024)
         fireParams = jsonParams;
 
         // startvärden – volym lite lagom
-        fireNode.setParamValue("/wet", 1);      // vått trä = mer crackle
-        fireNode.setParamValue("/gate", 0);     // avstängd från start
-        fireNode.setParamValue("/volume", 0.7);
+        fireNode.setParamValue("/fire/wet", 1);      // vått trä = mer crackle
+        fireNode.setParamValue("/fire/gate", 0);     // avstängd från start
+        fireNode.setParamValue("/fire/volume", 0.7);
     });
 
 
@@ -57,8 +57,8 @@ window[windName].createDSP(audioContext, 1024)
         windParams = ui;
 
         // startvärden – vind avstängd
-        windNode.setParamValue("/wind/force", 0.0);
-        windNode.setParamValue("/volume", 0.0);
+        windNode.setParamValue("/wind/wind/force", 0.0);
+        windNode.setParamValue("/wind/volume", 0.0);
     });
 
 
@@ -143,9 +143,9 @@ function triggerFireCrackle() {
     if (!fireNode) return;
 
     // gate 1 en kort stund
-    fireNode.setParamValue("/gate", 1);
+    fireNode.setParamValue("/fire/gate", 1);
     setTimeout(() => {
-        fireNode.setParamValue("/gate", 0);
+        fireNode.setParamValue("/fire/gate", 0);
     }, 200); // 200 ms, justera om du vill längre/kortare crackle
 }
 
@@ -156,8 +156,8 @@ function startWind() {
     statusLabels[1].style("color", "lightblue");
 
     // fadea upp wind-force och volume
-    windNode.setParamValue("/wind/force", 0.0);
-    windNode.setParamValue("/volume", 0.0);
+    windNode.setParamValue("/wind/wind/force", 0.0);
+    windNode.setParamValue("/wind/volume", 0.0);
 
     let steps = 10;
     let current = 0;
@@ -169,8 +169,8 @@ function startWind() {
         const force  = 0.2 + 0.8 * t;  // från lite vind till stark
         const volume = 0.2 + 0.8 * t;
 
-        windNode.setParamValue("/wind/force", force);
-        windNode.setParamValue("/volume", volume);
+        windNode.setParamValue("/wind/wind/force", force);
+        windNode.setParamValue("/wind/volume", volume);
 
         if (current >= steps) {
             clearInterval(interval);

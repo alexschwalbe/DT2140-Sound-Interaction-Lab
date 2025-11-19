@@ -77,10 +77,7 @@ function rotationChange(rotx, roty, rotz) {
     }
 }
 
-function mousePressed() {
-    // För desktop-debug (om du vill):
-    // playAudio(mouseX / windowWidth);
-}
+
 
 function deviceMoved() {
     movetimer = millis();
@@ -91,9 +88,16 @@ function deviceTurned() {
     threshVals[1] = turnAxis;
 }
 
+function mousePressed() {
+    // För desktop-debug – klick på skärmen -> motor på max
+    playAudio(1.0);
+}
+
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
+    // Skaka telefonen -> starta motorn på ganska hög nivå
+    playAudio(0.8);
 }
 
 function getMinMaxParam(address) {

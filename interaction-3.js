@@ -1,41 +1,64 @@
 //==========================================================================================
-// AUDIO SETUP
+// AUDIO SETUP – FIRE + WIND
 //==========================================================================================
-let dspNode = null;
-let dspNodeParams = null;
+let fireNode = null;
+let windNode = null;
+let fireParams = null;
+let windParams = null;
 let jsonParams = null;
 
-// Namnet måste matcha engine.wasm
-const dspName = "engine";
-const instance = new FaustWasm2ScriptProcessor(dspName);
+// ========== FIRE SETUP ==========
+const fireName = "fire";
+const fireInstance = new FaustWasm2ScriptProcessor(fireName);
 
-// output to window or npm package module
 if (typeof module === "undefined") {
-    window[dspName] = instance;
+    window[fireName] = fireInstance;
 } else {
     const exp = {};
-    exp[dspName] = instance;
+    exp[fireName] = fireInstance;
     module.exports = exp;
 }
 
-// Skapa DSP från engine.wasm
-engine.createDSP(audioContext, 1024)
+window[fireName].createDSP(audioContext, 1024)
     .then(node => {
-        dspNode = node;
-        dspNode.connect(audioContext.destination);
-        console.log('params: ', dspNode.getParams());
-        const jsonString = dspNode.getJSON();
+        fireNode = node;
+        fireNode.connect(audioContext.destination);
+        console.log('FIRE params: ', fireNode.getParams());
+        const jsonString = fireNode.getJSON();
         jsonParams = JSON.parse(jsonString)["ui"][0]["items"];
-        dspNodeParams = jsonParams;
+        fireParams = jsonParams;
 
-        // (valfritt) sätt lite default-värden
-        dspNode.setParamValue("/engine/brushLevel", 0.9);
-        dspNode.setParamValue("/engine/rotorLevel", 0.6);
-        dspNode.setParamValue("/engine/statorLevel", 0.7);
-        dspNode.setParamValue("/engine/tubeRes", 0.2);
-        dspNode.setParamValue("/engine/runtime", 5.0);
-        dspNode.setParamValue("/engine/gate", 0);   // starta med motor av
-        dspNode.setParamValue("/engine/volume", 0.3);
+        // startvärden – volym lite lagom
+        fireNode.setParamValue("/wet", 1);      // vått trä = mer crackle
+        fireNode.setParamValue("/gate", 0);     // avstängd från start
+        fireNode.setParamValue("/volume", 0.7);
+    });
+
+
+// ========== WIND SETUP ==========
+const windName = "wind";
+const windInstance = new FaustWasm2ScriptProcessor(windName);
+
+if (typeof module === "undefined") {
+    window[windName] = windInstance;
+} else {
+    const exp = {};
+    exp[windName] = windInstance;
+    module.exports = exp;
+}
+
+window[windName].createDSP(audioContext, 1024)
+    .then(node => {
+        windNode = node;
+        windNode.connect(audioContext.destination);
+        console.log('WIND params: ', windNode.getParams());
+        const jsonString = windNode.getJSON();
+        const ui = JSON.parse(jsonString)["ui"][0]["items"];
+        windParams = ui;
+
+        // startvärden – vind avstängd
+        windNode.setParamValue("/wind/force", 0.0);
+        windNode.setParamValue("/volume", 0.0);
     });
 
 
@@ -44,39 +67,55 @@ engine.createDSP(audioContext, 1024)
 //==========================================================================================
 
 function accelerationChange(accx, accy, accz) {
-    // valfri extra interaktion
+    // kan vara tom, vi använder tilt i rotationChange
 }
 
-let lastEngineActive = false; // minns om motorn var igång senast
+let wasInFireZone = false;
+let fireCracklesCount = 0;
+const requiredCrackles = 3;
+let windStarted = false;
 
-// ENGINE: styrs av tilt sida-till-sida när telefonen ligger platt i handen
+// När telefonen tiltas (roll/pitch) vill vi först få FIRE-crackles
+// och efter några trigger -> starta WIND
 function rotationChange(rotx, roty, rotz) {
-    if (!dspNode) return;
+    if (!fireNode || !windNode) return;
     if (audioContext.state === "suspended") return;
 
     const pitch = rotx; // fram/bak
-    const roll  = roty; // sida till sida
+    const roll  = roty; // sida-till-sida
 
-    console.log("rotation:", pitch, roll, rotz);
+    // Debugga värdena första gången om du vill
+    // console.log("rotation:", pitch, roll, rotz);
 
-    // Telefonen "platt" ≈ pitch nära 0
+    // Definiera en "fire-zon": t.ex. telefon någorlunda platt,
+    // men tiltad i sidled mer än en viss gräns.
     const flatTarget    = 0;
-    const flatTolerance = 20;
-    const isFlat = Math.abs(pitch - flatTarget) < flatTolerance;
+    const flatTolerance = 25;
+    const isFlat        = Math.abs(pitch - flatTarget) < flatTolerance;
 
-    if (isFlat) {
-        statusLabels[1].style("color", "lightgreen");
-        playEngineFromTilt(roll);
-        lastEngineActive = true;
-    } else {
-        statusLabels[1].style("color", "black");
-        if (lastEngineActive) {
-            dspNode.setParamValue("/engine/gate", 0); // stoppa motorn
-            lastEngineActive = false;
+    const tiltThreshold = 25; // hur mycket sida-till-sida som krävs
+    const strongTilt    = Math.abs(roll) > tiltThreshold;
+
+    const inFireZone = isFlat && strongTilt && !windStarted;
+
+    // vi triggar EN crackle när vi går IN i zonen
+    if (inFireZone && !wasInFireZone) {
+        statusLabels[1].style("color", "orange");
+        triggerFireCrackle();
+        fireCracklesCount += 1;
+
+        // efter X crackles startar vi vinden
+        if (fireCracklesCount >= requiredCrackles) {
+            startWind();
         }
     }
-}
 
+    if (!inFireZone) {
+        statusLabels[1].style("color", "black");
+    }
+
+    wasInFireZone = inFireZone;
+}
 
 
 function deviceMoved() {
@@ -88,51 +127,55 @@ function deviceTurned() {
     threshVals[1] = turnAxis;
 }
 
-
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    // Skaka telefonen -> starta motorn på ganska hög nivå
-    playAudio(0.8);
-}
-
-function getMinMaxParam(address) {
-    const exampleMinMaxParam = findByAddress(dspNodeParams, address);
-    const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
-    console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
-    return [exampleMinValue, exampleMaxValue];
+    // vi använder inte skakning i denna interaction, så ingen ljudtrigger här
 }
 
 
 //==========================================================================================
-// AUDIO INTERACTION – ENGINE
+// AUDIO HELPERS – FIRE + WIND
 //==========================================================================================
 
-// Allmän wrapper: styr motorn med ett "pressure" [0,1]
-function playAudio(pressure) {
-    if (!dspNode) return;
-    if (audioContext.state === 'suspended') return;
+// trigga en kort crackle från FIRE
+function triggerFireCrackle() {
+    if (!fireNode) return;
 
-    const p = Math.max(0, Math.min(1, pressure)); // clamp 0..1
-
-    // Slå på motorn om vi har lite tryck
-    dspNode.setParamValue("/engine/gate", p > 0.05 ? 1 : 0);
-
-    // Koppla pressure till maxSpeed och volume
-    dspNode.setParamValue("/engine/maxSpeed", p);
-    dspNode.setParamValue("/engine/volume", 0.2 + 0.8 * p);
+    // gate 1 en kort stund
+    fireNode.setParamValue("/gate", 1);
+    setTimeout(() => {
+        fireNode.setParamValue("/gate", 0);
+    }, 200); // 200 ms, justera om du vill längre/kortare crackle
 }
 
-// Tilt-funktion (roll)
-function playEngineFromTilt(roll) {
-    if (!dspNode) return;
-    if (audioContext.state === 'suspended') return;
+// starta vinden gradvis
+function startWind() {
+    if (!windNode) return;
+    windStarted = true;
+    statusLabels[1].style("color", "lightblue");
 
-    const maxTilt = 60;
-    const clamped = Math.max(-maxTilt, Math.min(maxTilt, roll));
-    const norm = Math.abs(clamped) / maxTilt; // 0 = platt, 1 = max tilt
+    // fadea upp wind-force och volume
+    windNode.setParamValue("/wind/force", 0.0);
+    windNode.setParamValue("/volume", 0.0);
 
-    playAudio(norm);
+    let steps = 10;
+    let current = 0;
+
+    const interval = setInterval(() => {
+        current += 1;
+        const t = current / steps; // 0..1
+
+        const force  = 0.2 + 0.8 * t;  // från lite vind till stark
+        const volume = 0.2 + 0.8 * t;
+
+        windNode.setParamValue("/wind/force", force);
+        windNode.setParamValue("/volume", volume);
+
+        if (current >= steps) {
+            clearInterval(interval);
+        }
+    }, 200); // 200 ms per steg
 }
 
 //==========================================================================================
